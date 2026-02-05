@@ -1,13 +1,14 @@
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from ingest import chunks
-# ===============================================================
+# ===================================================================
 
-
-emb = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+emb = HuggingFaceEmbeddings(
+  model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 dbase = FAISS.from_documents(chunks, emb)
 dbase.save_local("data/index")
 
-print("Vector index built")
+print("Vector index built successfully!")

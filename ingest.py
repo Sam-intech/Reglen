@@ -3,6 +3,7 @@ from config import DATA_PATH
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 # =================================================================
 
 
@@ -18,13 +19,29 @@ for file in os.listdir(DATA_PATH):
 
 print(f"Loaded {len(docs)} pages")
 
+
 # ------------------------------------------------------------------
 # breaking long documents into smaller chunks
 splitter = RecursiveCharacterTextSplitter(
-  chunk_size = 450,
-  chunk_overlap = 50,
+  chunk_size = 800,
+  chunk_overlap = 100,
 )
 
-chunks = splitter.split_documents(docs)
+# chunks = splitter.split_documents(docs)
+chunks = []
+
+for doc in docs:
+  splits = splitter.split_text(doc.page_content)
+  for i, text in enumerate(splits):
+    chunks.append(
+      Document(
+        page_content = text,
+        metadata = {
+          "source": doc.metadata.get("source", "unknown"),
+          "page": doc.metadata.get("page"),
+          "chunk": i,
+        }
+      )
+    )
 
 print(f"Split into {len(chunks)} chunks")

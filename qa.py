@@ -1,6 +1,6 @@
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 # ===================================================================
@@ -11,18 +11,44 @@ emb = HuggingFaceEmbeddings(
   model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-dbase = FAISS.load_local("data/index", emb, allow_dangerous_deserialization=True)
+dbase = FAISS.load_local(
+  "data/index", 
+  emb, 
+  allow_dangerous_deserialization=True
+)
 
 
 # ------------------
 # User question
 question = "What does regulation require for customer due diligence?"
+# question = "what does regulation 7 require firms to do?"
 
 
 # ------------------
 # Retrieve context
 docs = dbase.similarity_search(question, k=4)
 context = "\n\n".join([d.page_content for d in docs])
+sources = [
+  f"Source {i+1}: {d.metadata['source']} (chunk {d.metadata['chunk']})"
+  for i, d in enumerate(docs)
+]
+
+if not docs:
+  print("ANSWER:\nNOT FOUND")
+  exit()
+
+# removing duplicates (same source + chunk) from sources list
+seen = set()
+sources = []
+
+for i, d in enumerate(docs):
+  key = (d.metadata.get("source"), d.metadata.get("chunk"))
+  if key not in seen:
+    seen.add(key)
+    sources.append(
+      f"Source {len(sources)+1}: {key[0]} (chunk {key[1]})"
+    )
+
 
 
 # -----------------
@@ -34,6 +60,7 @@ messages = [
     content=(
       "You are a regulatory analysis assistant. "
       "Answer ONLY using the provided context. "
+      "Cite sources inline like [source 1]. "
       "If the answer is not in the context, say: NOT FOUND."
     )
   ),
@@ -45,6 +72,12 @@ messages = [
 
 response = llm.invoke(messages)
 
+
+# ---------------
+# final output
 # print("\nANSWER:\n")
 # print(response.content)
 print(f"\nANSWER:\n{response.content}")
+print("\nSOURCES:\n")
+for s in sources:
+  print("-", s)
