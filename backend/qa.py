@@ -81,3 +81,30 @@ print(f"\nANSWER:\n{response.content}")
 print("\nSOURCES:\n")
 for s in sources:
   print("-", s)
+
+
+
+# ============================
+SYSTEM_PROMPT = messages[0].content
+
+def run_qa(question: str):
+  docs = dbase.similarity_search(question, k=4)
+  context = "\n\n".join([d.page_content for d in docs])
+
+  response = llm.invoke([
+    SystemMessage(content=SYSTEM_PROMPT),
+    HumanMessage(content=f"Context:\n{context}\n\nQuestion:\n{question}")
+  ])
+
+  seen = set()
+  sources = []
+  for d in docs:
+    key = (d.metadata.get("source"), d.metadata.get("chunk"))
+    if key not in seen:
+      seen.add(key)
+      sources.append({
+        "source": key[0],
+        "chunk": key[1]
+      })
+
+  return response.content, sources
