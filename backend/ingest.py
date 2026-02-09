@@ -23,7 +23,7 @@ print(f"Loaded {len(docs)} pages")
 # ------------------------------------------------------------------
 # breaking long documents into smaller chunks
 splitter = RecursiveCharacterTextSplitter(
-  chunk_size = 800,
+  chunk_size = 400,
   chunk_overlap = 100,
 )
 

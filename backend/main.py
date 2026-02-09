@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+import asyncio
 from qa import run_qa  # you refactor qa.py into a function
 # =======================================================================
 
@@ -9,9 +10,14 @@ class Query(BaseModel):
   question: str
 
 @app.post("/ask")
-def ask(query: Query):
-  answer, sources = run_qa(query.question)
+async def ask(query: Query):
+  answer = await asyncio.to_thread(run_qa, query.question)
   return {
     "answer": answer,
-    "sources": sources
+    # "sources": sources
   }
+
+
+@app.get("/")
+def health():
+  return {"status": "ok"}
