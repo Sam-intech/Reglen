@@ -1,62 +1,124 @@
-import { useState } from "react";
-// ======================================
+import { useEffect, useRef, useState } from "react";
+import { askQuestion } from "./api";
+// ==================================================
 
-type AnswerResponse = {
-  answer: string;
-  sources: string[];
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 export default function App() {
-  const [question, setQuestion] = useState("");
-  const [data, setData] = useState<AnswerResponse | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const ask = async () => {
+  // auto-scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const question = input.trim();
+    setInput("");
     setLoading(true);
-    const res = await fetch("http://localhost:8000/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
-    });
-    setData(await res.json());
-    setLoading(false);
+
+    // add user message
+    setMessages((m) => [...m, { role: "user", content: question }]);
+
+    try {
+      const answer = await askQuestion(question);
+      typeWriter(answer || "NOT FOUND");
+    } catch (err) {
+      console.error(err);
+      typeWriter("Backend error. Check server logs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // typewriter effect for assistant
+  const typeWriter = (text: string) => {
+    let i = 0;
+    let current = "";
+
+    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+
+    const interval = setInterval(() => {
+      current += text[i] ?? "";
+      i++;
+
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: current,
+        };
+        return copy;
+      });
+
+      if (i >= text.length) clearInterval(interval);
+    }, 15);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-semibold">Regulatory QA</h1>
+    <div className="h-screen bg-neutral-900 text-white flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-neutral-800 text-lg font-semibold">
+        Regulatory QA
+      </div>
 
-        <textarea
-          className="w-full p-3 rounded bg-zinc-900 border border-zinc-700"
-          placeholder="Ask a regulation question…"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-        />
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`max-w-2xl px-4 py-3 rounded-lg whitespace-pre-wrap leading-relaxed ${
+              m.role === "user"
+                ? "ml-auto bg-indigo-600"
+                : "mr-auto bg-neutral-800"
+            }`}
+          >
+            {m.content}
+          </div>
+        ))}
 
-        <button onClick={ask} className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500">
-          Ask
-        </button>
-
-        {loading && <p className="opacity-70">Thinking…</p>}
-
-        {data && (
-          <div className="space-y-4">
-            <div className="p-4 bg-zinc-900 rounded">
-              <h2 className="font-medium">Answer</h2>
-              <p className="mt-2 text-sm">{data.answer}</p>
-            </div>
-
-            <div className="p-4 bg-zinc-900 rounded">
-              <h2 className="font-medium">Sources</h2>
-              <ul className="mt-2 text-sm list-disc list-inside">
-                {data.sources.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </div>
+        {loading && (
+          <div className="mr-auto bg-neutral-800 px-4 py-3 rounded-lg text-neutral-400">
+            Thinking…
           </div>
         )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-neutral-800">
+        <div className="flex gap-3">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a regulation question…"
+            rows={2}
+            className="flex-1 resize-none bg-neutral-800 border border-neutral-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={loading}
+            className="px-5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
       </div>
     </div>
   );
