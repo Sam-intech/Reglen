@@ -30,8 +30,10 @@ a {
 body {
   margin: 0;
   display: flex;
-  place-items: center;
-  min-width: 320px;
+  flex-direction: column;
+  justify-content: center;
+  /* place-items: center; */
+  min-width: 100vw;
   min-height: 100vh;
 }
 
