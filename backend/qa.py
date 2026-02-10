@@ -18,7 +18,7 @@ SYSTEM_PROMPT = (
   # "when stating facts, cite the source inline in square brackets "
   # "(e.g. [FCG, Page 12]). "
   "If the context implies an answer, summarise it clearly. "
-  "If the answer truly cannot be inferred, say: NOT FOUND."
+  "If the answer truly cannot be inferred, say: I do not understand the question or the context of the question. Kindly rephrase it."
 )
 
 # --------------
@@ -27,8 +27,9 @@ def run_qa(question: str):
   docs = dbase.similarity_search(question, k=8)
 
   if not docs:
+    # return "I do not understand the question or the context of the question. Kindly rephrase it."
     return "NOT FOUND"
-  
+
   context = "\n\n".join([d.page_content for d in docs])
 
   response = llm.invoke([
